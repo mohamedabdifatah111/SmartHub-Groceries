@@ -1,16 +1,46 @@
+// ─── src/components/Footer.js ─────────────────────────────────────────────────
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { contactAPI } from '../services/api';
 import '../styles/components.css';
 
 const Footer = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', message: '' });
+  const [form, setForm]       = useState({ name: '', email: '', message: '' });
+  const [sending, setSending] = useState(false);
+  const [newsletter, setNewsletter] = useState('');
+  const [subscribing, setSubscribing] = useState(false);
 
-  const handleSubmit = (e) => {
+  // ── Contact form ────────────────────────────────────────────────────────────
+  const handleContact = async (e) => {
     e.preventDefault();
-    toast.success('Message sent! We\'ll get back to you soon.', { icon: '✉️' });
-    setForm({ name: '', email: '', message: '' });
+    setSending(true);
+    try {
+      await contactAPI.send(form.name, form.email, form.message);
+      toast.success("Message sent! We'll get back to you soon.", { icon: '✉️' });
+      setForm({ name: '', email: '', message: '' });
+    } catch (err) {
+      toast.error(err.message || 'Failed to send message. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // ── Newsletter ──────────────────────────────────────────────────────────────
+  const handleNewsletter = async (e) => {
+    e.preventDefault();
+    if (!newsletter) return;
+    setSubscribing(true);
+    try {
+      await contactAPI.subscribe(newsletter);
+      toast.success('Subscribed! Check your inbox for a welcome email.', { icon: '📧' });
+      setNewsletter('');
+    } catch (err) {
+      toast.error(err.message || 'Subscription failed. Please try again.');
+    } finally {
+      setSubscribing(false);
+    }
   };
 
   return (
@@ -18,7 +48,7 @@ const Footer = () => {
       <div className="container">
         <div className="row g-4 mb-4">
 
-          {/* Brand */}
+          {/* Brand + Newsletter */}
           <div className="col-lg-3 col-md-6">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
               <div style={{ background: '#6abf69', width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🛒</div>
@@ -30,20 +60,34 @@ const Footer = () => {
             <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.7, marginBottom: 16 }}>
               Fresh groceries delivered to your doorstep. Quality produce, unbeatable prices.
             </p>
-            <div className="social-icons">
-              <a href="#!" className="social-icon"><i className="bi bi-facebook"></i></a>
-              <a href="#!" className="social-icon"><i className="bi bi-twitter-x"></i></a>
-              <a href="#!" className="social-icon"><i className="bi bi-instagram"></i></a>
-              <a href="#!" className="social-icon"><i className="bi bi-whatsapp"></i></a>
+
+            {/* Newsletter */}
+            <form onSubmit={handleNewsletter} style={{ display: 'flex', gap: 6 }}>
+              <input type="email" placeholder="Your email…" value={newsletter}
+                onChange={e => setNewsletter(e.target.value)} required
+                style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', color: 'white', fontSize: '0.82rem', outline: 'none', fontFamily: 'DM Sans, sans-serif' }} />
+              <button type="submit" disabled={subscribing}
+                style={{ background: '#6abf69', border: 'none', color: 'white', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontSize: '0.82rem', fontFamily: 'DM Sans, sans-serif' }}>
+                {subscribing ? '…' : 'Sub'}
+              </button>
+            </form>
+            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', marginTop: 5 }}>
+              Subscribe for deals & updates
+            </div>
+
+            <div className="social-icons mt-3">
+              {[['bi-facebook','#'], ['bi-twitter-x','#'], ['bi-instagram','#'], ['bi-whatsapp','#']].map(([icon, href]) => (
+                <a key={icon} href={href} className="social-icon"><i className={`bi ${icon}`}></i></a>
+              ))}
             </div>
           </div>
 
           {/* Quick Links */}
           <div className="col-lg-2 col-md-6">
             <h5>Quick Links</h5>
-            {['Home', 'Shop', 'Cart', 'Login', 'Register'].map(link => (
-              <button key={link} className="footer-link" onClick={() => navigate(`/${link === 'Home' ? '' : link.toLowerCase()}`)}>
-                <i className="bi bi-chevron-right me-1" style={{ fontSize: '0.7rem' }}></i>{link}
+            {[['Home', '/'], ['Shop', '/products'], ['Cart', '/cart'], ['Login', '/login'], ['Register', '/register']].map(([label, path]) => (
+              <button key={label} className="footer-link" onClick={() => navigate(path)}>
+                <i className="bi bi-chevron-right me-1" style={{ fontSize: '0.7rem' }}></i>{label}
               </button>
             ))}
           </div>
@@ -62,9 +106,9 @@ const Footer = () => {
           <div className="col-lg-2 col-md-6">
             <h5>Store Info</h5>
             <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', lineHeight: 2 }}>
-              <div><i className="bi bi-geo-alt me-2"></i>Wakulima Market</div>
+              <div><i className="bi bi-geo-alt me-2"></i>Wakulima market</div>
               <div style={{ paddingLeft: 20 }}>Nairobi, Kenya</div>
-              <div><i className="bi bi-telephone me-2"></i>+254 724 294 617</div>
+              <div><i className="bi bi-telephone me-2"></i>+254 724 294  617</div>
               <div><i className="bi bi-envelope me-2"></i>hello@smarthub.co.ke</div>
               <div><i className="bi bi-clock me-2"></i>Mon–Sat: 8am–8pm</div>
               <div style={{ paddingLeft: 20 }}>Sun: 9am–5pm</div>
@@ -74,13 +118,22 @@ const Footer = () => {
           {/* Contact Form */}
           <div className="col-lg-3 col-md-12">
             <h5>Get In Touch</h5>
-            <form className="footer-contact-form" onSubmit={handleSubmit}>
-              <input type="text" placeholder="Your name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
-              <input type="email" placeholder="Email address" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-              <textarea rows={3} placeholder="Your message…" value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} required style={{ resize: 'none' }} />
-              <button type="submit" className="footer-submit">Send Message <i className="bi bi-send ms-1"></i></button>
+            <form className="footer-contact-form" onSubmit={handleContact}>
+              <input type="text" placeholder="Your name" required
+                value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+              <input type="email" placeholder="Email address" required
+                value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+              <textarea rows={3} placeholder="Your message…" required style={{ resize: 'none' }}
+                value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} />
+              <button type="submit" className="footer-submit" disabled={sending}>
+                {sending
+                  ? <><span className="spinner-border spinner-border-sm me-2" style={{ width: 12, height: 12 }}></span>Sending…</>
+                  : <>Send Message <i className="bi bi-send ms-1"></i></>
+                }
+              </button>
             </form>
           </div>
+
         </div>
 
         <hr className="footer-divider" />
